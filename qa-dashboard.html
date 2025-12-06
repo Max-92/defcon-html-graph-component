@@ -375,11 +375,18 @@
         .custom-tooltip.pinned {
             pointer-events: auto;
             border-color: var(--accent-blue);
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 12px 48px rgba(59, 130, 246, 0.4);
+            position: fixed;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) scale(1.4);
+            font-size: 18px;
+            padding: 20px 28px;
+            min-width: 280px;
+            z-index: 2000;
         }
 
-        .custom-tooltip:hover,
-        .custom-tooltip.zoomed {
+        .custom-tooltip:hover:not(.pinned) {
             transform: scale(1.25);
             transform-origin: top left;
             font-size: 16px;
@@ -388,7 +395,7 @@
         }
 
         .custom-tooltip.pinned:hover {
-            transform: scale(1.35);
+            transform: translate(-50%, -50%) scale(1.5);
         }
 
         .tooltip-header {
