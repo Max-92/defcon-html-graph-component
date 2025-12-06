@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Dashboard - Métricas de Calidad</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --border-color: #2a2a3a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --accent-orange: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 1.5rem;
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(245, 158, 11, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-tab:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-blue));
+            color: var(--bg-primary);
+            border-color: transparent;
+            font-weight: 600;
+        }
+
+        /* Views */
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .dashboard-grid .chart-card:last-child {
+            grid-column: 1 / -1;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            border-color: var(--accent-orange);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-card-title .icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .chart-card-title .icon.orange { background: var(--accent-orange); }
+        .chart-card-title .icon.blue { background: var(--accent-blue); }
+        .chart-card-title .icon.yellow { background: var(--accent-yellow); }
+
+        .mini-chart-container {
+            height: 180px;
+        }
+
+        /* Full Chart View */
+        .chart-wrapper {
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .filter-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .filter-btn.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .filter-btn .indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .zoom-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.875rem;
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        .legend-custom {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-icon {
+            width: 16px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* Instructions */
+        .instructions {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .instructions-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .instructions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .instructions-item {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .instructions-item kbd {
+            background: var(--bg-card);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Click hint for dashboard */
+        .click-hint {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 1rem;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.5rem; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .dashboard-grid .chart-card:last-child { grid-column: auto; }
+            .chart-container { height: 300px; }
+            .mini-chart-container { height: 150px; }
+            .nav-tab { padding: 0.5rem 0.75rem; font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>QA Dashboard</h1>
+            <p class="subtitle">Métricas de Calidad • Sep - Dic 2025</p>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-view="dashboard">📊 Dashboard</button>
+            <button class="nav-tab" data-view="bugs">🐛 Bugs Enc/Corr</button>
+            <button class="nav-tab" data-view="defcon">🚨 DEFCON</button>
+            <button class="nav-tab" data-view="historias">📋 Historias No Cubiertas</button>
+        </nav>
+
+        <!-- Dashboard View -->
+        <div id="dashboard" class="view active">
+            <div class="dashboard-grid">
+                <div class="chart-card" data-goto="bugs">
+                    <div class="chart-card-title">
+                        <span class="icon orange"></span>
+                        Bugs Encontrados vs Corregidos
+                    </div>
+                    <div class="mini-chart-container">
+                        <canvas id="miniBugsChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" data-goto="defcon">
+                    <div class="chart-card-title">
+                        <span class="icon yellow"></span>
+                        DEFCON por Semana
+                    </div>
+                    <div class="mini-chart-container">
+                        <canvas id="miniDefconChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" data-goto="historias">
+                    <div class="chart-card-title">
+                        <span class="icon yellow"></span>
+                        Historias No Cubiertas (QA Coverage)
+                    </div>
+                    <div class="mini-chart-container">
+                        <canvas id="miniHistoriasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p class="click-hint">💡 Haz clic en cualquier gráfico para verlo en detalle</p>
+        </div>
+
+        <!-- Bugs View -->
+        <div id="bugs" class="view">
+            <div class="chart-wrapper">
+                <div class="chart-header">
+                    <h2 class="chart-title">🐛 Bugs Encontrados vs Corregidos</h2>
+                    <div class="controls">
+                        <button class="filter-btn active" data-series="barFound">
+                            <span class="indicator" style="background: #f59e0b;"></span>
+                            Encontrados
+                        </button>
+                        <button class="filter-btn active" data-series="barFixed">
+                            <span class="indicator" style="background: #3b82f6;"></span>
+                            Corregidos
+                        </button>
+                        <button class="filter-btn active" data-series="barFixedAlt">
+                            <span class="indicator" style="background: #22c55e;"></span>
+                            Corr. (Verde)
+                        </button>
+                        <button class="filter-btn active" data-series="lineFound">
+                            <span class="indicator" style="background: transparent; border: 2px solid #f59e0b; border-radius: 50%;"></span>
+                            Línea Enc.
+                        </button>
+                        <button class="filter-btn active" data-series="lineFixed">
+                            <span class="indicator" style="background: transparent; border: 2px solid #3b82f6; border-radius: 50%;"></span>
+                            Línea Corr.
+                        </button>
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" data-zoom="in">+</button>
+                            <button class="zoom-btn" data-zoom="out">−</button>
+                            <button class="zoom-btn" data-zoom="reset">↺</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="bugsChart"></canvas>
+                </div>
+                <div class="legend-custom">
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #f59e0b;"></span>
+                        Bugs Encontrados
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #3b82f6;"></span>
+                        Bugs Corregidos (Azul)
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #22c55e;"></span>
+                        Bugs Corregidos (Verde)
+                    </div>
+                </div>
+                <div class="instructions">
+                    <div class="instructions-title">💡 Controles</div>
+                    <div class="instructions-grid">
+                        <span class="instructions-item"><kbd>Arrastrar</kbd> Desplazar</span>
+                        <span class="instructions-item"><kbd>Scroll</kbd> Zoom</span>
+                        <span class="instructions-item"><kbd>Botones</kbd> Filtrar series</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEFCON View -->
+        <div id="defcon" class="view">
+            <div class="chart-wrapper">
+                <div class="chart-header">
+                    <h2 class="chart-title">🚨 DEFCON por Semana</h2>
+                    <div class="controls">
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" data-zoom="in">+</button>
+                            <button class="zoom-btn" data-zoom="out">−</button>
+                            <button class="zoom-btn" data-zoom="reset">↺</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="defconChart"></canvas>
+                </div>
+                <div class="instructions">
+                    <div class="instructions-title">💡 Controles</div>
+                    <div class="instructions-grid">
+                        <span class="instructions-item"><kbd>Arrastrar</kbd> Desplazar</span>
+                        <span class="instructions-item"><kbd>Scroll</kbd> Zoom</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historias View -->
+        <div id="historias" class="view">
+            <div class="chart-wrapper">
+                <div class="chart-header">
+                    <h2 class="chart-title">📋 Historias No Cubiertas (QA Coverage)</h2>
+                    <div class="controls">
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" data-zoom="in">+</button>
+                            <button class="zoom-btn" data-zoom="out">−</button>
+                            <button class="zoom-btn" data-zoom="reset">↺</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="historiasChart"></canvas>
+                </div>
+                <div class="instructions">
+                    <div class="instructions-title">💡 Controles</div>
+                    <div class="instructions-grid">
+                        <span class="instructions-item"><kbd>Arrastrar</kbd> Desplazar</span>
+                        <span class="instructions-item"><kbd>Scroll</kbd> Zoom</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register plugins
+        Chart.register(ChartDataLabels);
+
+        // ========== DATA ==========
+        const labels = [
+            '1-7/09', '7-14/09', '15-21/09', '22-28/09', 
+            '29/9-5/10', '5-12/10', '13-19/10', '20-26/10',
+            '27/10-3/11', '3-9/11', '10-16/11', '17-23/11',
+            '24-30/11', '1-8/12'
+        ];
+
+        // Bugs data
+        const bugsFound = [5, 3, 0, 7, 2, 3, 3, 2, 0, 2, 3, 1, 3, 2];
+        const bugsFixedMain = [0, 0, 8, 0, 0, 8, 0, 0, 10, 0, 2, 0, 5, 0];
+        const bugsFixedAlt = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0];
+        const releaseLabelsMain = ['', '', '5.9', '', '', '5.10', '', '', '5.11', '', '5.12', '', '5.13', ''];
+        const releaseLabelsAlt = ['', '', '', '', '', '', '', '', '', '', '', '', '5.14', ''];
+
+        // DEFCON data (x = null for unknown)
+        const defconData = [3, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, null];
+
+        // Historias no cubiertas (NaN = null)
+        const historiasData = [null, null, 16, 15, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10];
+
+        // Cumulative calculations
+        let cumulativeFound = [], cumulativeFixed = [];
+        let sumFound = 0, sumFixed = 0;
+        for (let i = 0; i < bugsFound.length; i++) {
+            sumFound += bugsFound[i];
+            sumFixed += bugsFixedMain[i] + bugsFixedAlt[i];
+            cumulativeFound.push(sumFound);
+            cumulativeFixed.push(sumFixed);
+        }
+
+        // ========== CHART INSTANCES ==========
+        let charts = {};
+
+        // ========== CHART CONFIGS ==========
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: { display: false }
+            }
+        };
+
+        const zoomOptions = {
+            pan: { enabled: true, mode: 'x', threshold: 5 },
+            zoom: {
+                wheel: { enabled: true, speed: 0.1 },
+                pinch: { enabled: true },
+                mode: 'x'
+            },
+            limits: { x: { minRange: 4 } }
+        };
+
+        const axisStyle = {
+            grid: { color: 'rgba(42, 42, 58, 0.5)', drawBorder: false },
+            ticks: { color: '#8888a0', font: { family: "'Space Mono', monospace", size: 10 } }
+        };
+
+        // ========== CREATE CHARTS ==========
+        function createBugsChart(canvasId, mini = false) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Bugs Encontrados',
+                            data: bugsFound,
+                            backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1,
+                            borderRadius: mini ? 2 : 4,
+                            order: 3,
+                            yAxisID: 'y',
+                            stack: 'found'
+                        },
+                        {
+                            label: 'Bugs Corregidos (Azul)',
+                            data: bugsFixedMain,
+                            backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 0,
+                            order: 3,
+                            yAxisID: 'y',
+                            stack: 'fixed',
+                            releaseLabels: releaseLabelsMain,
+                            datalabels: mini ? { display: false } : {
+                                display: ctx => ctx.dataset.releaseLabels[ctx.dataIndex] !== '',
+                                formatter: (v, ctx) => ctx.dataset.releaseLabels[ctx.dataIndex],
+                                color: '#fff',
+                                font: { family: "'Space Mono'", size: 9, weight: 'bold' },
+                                anchor: 'center',
+                                align: 'center'
+                            }
+                        },
+                        {
+                            label: 'Bugs Corregidos (Verde)',
+                            data: bugsFixedAlt,
+                            backgroundColor: 'rgba(34, 197, 94, 0.85)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            borderRadius: { topLeft: mini ? 2 : 4, topRight: mini ? 2 : 4, bottomLeft: 0, bottomRight: 0 },
+                            order: 3,
+                            yAxisID: 'y',
+                            stack: 'fixed',
+                            releaseLabels: releaseLabelsAlt,
+                            datalabels: mini ? { display: false } : {
+                                display: ctx => ctx.dataset.releaseLabels[ctx.dataIndex] !== '',
+                                formatter: (v, ctx) => ctx.dataset.releaseLabels[ctx.dataIndex],
+                                color: '#fff',
+                                font: { family: "'Space Mono'", size: 9, weight: 'bold' },
+                                anchor: 'center',
+                                align: 'center'
+                            }
+                        },
+                        {
+                            label: 'Acumulado Encontrados',
+                            data: cumulativeFound,
+                            type: 'line',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: mini ? 2 : 3,
+                            pointRadius: mini ? 0 : 4,
+                            pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                            pointBorderColor: '#1a1a25',
+                            pointBorderWidth: 2,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Acumulado Corregidos',
+                            data: cumulativeFixed,
+                            type: 'line',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: mini ? 2 : 3,
+                            pointRadius: mini ? 0 : 4,
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointBorderColor: '#1a1a25',
+                            pointBorderWidth: 2,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        ...commonOptions.plugins,
+                        zoom: mini ? {} : zoomOptions,
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 37, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 10,
+                            filter: item => item.parsed.y > 0,
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.parsed.y > 0) {
+                                        let label = ctx.dataset.label + ': ' + ctx.parsed.y;
+                                        if (ctx.dataset.releaseLabels?.[ctx.dataIndex]) {
+                                            label += ' (Release ' + ctx.dataset.releaseLabels[ctx.dataIndex] + ')';
+                                        }
+                                        return label;
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ...axisStyle,
+                            ticks: { ...axisStyle.ticks, maxRotation: 45, minRotation: 45, display: !mini }
+                        },
+                        y: {
+                            ...axisStyle,
+                            position: 'left',
+                            beginAtZero: true,
+                            max: 12,
+                            ticks: { ...axisStyle.ticks, stepSize: mini ? 4 : 2, display: !mini },
+                            title: { display: !mini, text: 'Cantidad', color: '#8888a0', font: { size: 11 } }
+                        },
+                        y1: {
+                            ...axisStyle,
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: { drawOnChartArea: false },
+                            ticks: { ...axisStyle.ticks, display: !mini },
+                            title: { display: !mini, text: 'Acumulado', color: '#8888a0', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDefconChart(canvasId, mini = false) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'DEFCON',
+                        data: defconData,
+                        borderColor: 'rgba(234, 179, 8, 1)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                        borderWidth: mini ? 2 : 3,
+                        pointRadius: mini ? 3 : 5,
+                        pointBackgroundColor: 'rgba(234, 179, 8, 1)',
+                        pointBorderColor: '#1a1a25',
+                        pointBorderWidth: 2,
+                        tension: 0.2,
+                        fill: false,
+                        spanGaps: false
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    plugins: {
+                        ...commonOptions.plugins,
+                        zoom: mini ? {} : zoomOptions,
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 37, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: ctx => ctx.parsed.y !== null ? 'DEFCON: ' + ctx.parsed.y : 'Sin datos'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ...axisStyle,
+                            ticks: { ...axisStyle.ticks, maxRotation: 45, minRotation: 45, display: !mini }
+                        },
+                        y: {
+                            ...axisStyle,
+                            min: 1,
+                            max: 5,
+                            ticks: { ...axisStyle.ticks, stepSize: 1, display: !mini },
+                            title: { display: !mini, text: 'Nivel DEFCON', color: '#8888a0', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createHistoriasChart(canvasId, mini = false) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Historias No Cubiertas',
+                        data: historiasData,
+                        borderColor: 'rgba(234, 179, 8, 1)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                        borderWidth: mini ? 2 : 3,
+                        pointRadius: mini ? 3 : 5,
+                        pointBackgroundColor: 'rgba(234, 179, 8, 1)',
+                        pointBorderColor: '#1a1a25',
+                        pointBorderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        spanGaps: false
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    plugins: {
+                        ...commonOptions.plugins,
+                        zoom: mini ? {} : zoomOptions,
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 37, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ...axisStyle,
+                            ticks: { ...axisStyle.ticks, maxRotation: 45, minRotation: 45, display: !mini }
+                        },
+                        y: {
+                            ...axisStyle,
+                            beginAtZero: true,
+                            max: 18,
+                            ticks: { ...axisStyle.ticks, stepSize: mini ? 5 : 2, display: !mini },
+                            title: { display: !mini, text: 'Cantidad de Historias', color: '#8888a0', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ========== INITIALIZATION ==========
+        function initCharts() {
+            // Mini charts for dashboard
+            charts.miniBugs = createBugsChart('miniBugsChart', true);
+            charts.miniDefcon = createDefconChart('miniDefconChart', true);
+            charts.miniHistorias = createHistoriasChart('miniHistoriasChart', true);
+
+            // Full charts
+            charts.bugs = createBugsChart('bugsChart', false);
+            charts.defcon = createDefconChart('defconChart', false);
+            charts.historias = createHistoriasChart('historiasChart', false);
+        }
+
+        // ========== NAVIGATION ==========
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const views = document.querySelectorAll('.view');
+
+        function switchView(viewId) {
+            navTabs.forEach(t => t.classList.remove('active'));
+            views.forEach(v => v.classList.remove('active'));
+            
+            document.querySelector(`[data-view="${viewId}"]`).classList.add('active');
+            document.getElementById(viewId).classList.add('active');
+
+            // Reset zoom when switching views
+            if (charts[viewId]) {
+                charts[viewId].resetZoom();
+            }
+        }
+
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', () => switchView(tab.dataset.view));
+        });
+
+        // Dashboard card clicks
+        document.querySelectorAll('.chart-card').forEach(card => {
+            card.addEventListener('click', () => {
+                switchView(card.dataset.goto);
+            });
+        });
+
+        // ========== BUGS CHART CONTROLS ==========
+        const bugsView = document.getElementById('bugs');
+        const bugsDatasetMap = {
+            'barFound': 0,
+            'barFixed': 1,
+            'barFixedAlt': 2,
+            'lineFound': 3,
+            'lineFixed': 4
+        };
+
+        bugsView.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const series = this.dataset.series;
+                const index = bugsDatasetMap[series];
+                this.classList.toggle('active');
+                const meta = charts.bugs.getDatasetMeta(index);
+                meta.hidden = !this.classList.contains('active');
+                charts.bugs.update();
+            });
+        });
+
+        // ========== ZOOM CONTROLS ==========
+        document.querySelectorAll('.zoom-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const view = this.closest('.view');
+                const chartId = view.id;
+                const chart = charts[chartId];
+                
+                if (!chart) return;
+
+                switch(this.dataset.zoom) {
+                    case 'in': chart.zoom(1.2); break;
+                    case 'out': chart.zoom(0.8); break;
+                    case 'reset': chart.resetZoom(); break;
+                }
+            });
+        });
+
+        // Initialize on load
+        initCharts();
+    </script>
+</body>
+</html>
