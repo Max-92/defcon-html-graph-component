@@ -350,10 +350,143 @@
             .mini-chart-container { height: 150px; }
             .nav-tab { padding: 0.5rem 0.75rem; font-size: 0.65rem; }
         }
+
+        /* Custom Tooltip with Zoom */
+        .custom-tooltip {
+            position: absolute;
+            background: rgba(26, 26, 37, 0.98);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.2s ease;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            min-width: 180px;
+            font-size: 13px;
+        }
+
+        .custom-tooltip.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .custom-tooltip.pinned {
+            pointer-events: auto;
+            border-color: var(--accent-blue);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+        }
+
+        .custom-tooltip:hover,
+        .custom-tooltip.zoomed {
+            transform: scale(1.25);
+            transform-origin: top left;
+            font-size: 16px;
+            padding: 16px 20px;
+            min-width: 220px;
+        }
+
+        .custom-tooltip.pinned:hover {
+            transform: scale(1.35);
+        }
+
+        .tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tooltip-title {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1em;
+        }
+
+        .tooltip-close {
+            display: none;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 1;
+            padding: 0;
+            margin-left: 8px;
+            transition: color 0.2s;
+        }
+
+        .tooltip-close:hover {
+            color: var(--accent-orange);
+        }
+
+        .custom-tooltip.pinned .tooltip-close {
+            display: block;
+        }
+
+        .tooltip-body {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .tooltip-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .tooltip-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .tooltip-label {
+            flex: 1;
+        }
+
+        .tooltip-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tooltip-hint {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7em;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            text-align: center;
+        }
+
+        .custom-tooltip.pinned .tooltip-hint {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Custom Tooltip Element -->
+        <div id="customTooltip" class="custom-tooltip">
+            <div class="tooltip-header">
+                <span class="tooltip-title"></span>
+                <button class="tooltip-close" aria-label="Cerrar">×</button>
+            </div>
+            <div class="tooltip-body"></div>
+            <div class="tooltip-hint">Clic para fijar • Hover para agrandar</div>
+        </div>
+
         <header>
             <h1>QA Dashboard</h1>
             <p class="subtitle">Métricas de Calidad • Sep - Dic 2025</p>
@@ -550,6 +683,77 @@
             cumulativeFixed.push(sumFixed);
         }
 
+        // ========== CUSTOM TOOLTIP SYSTEM ==========
+        const customTooltip = document.getElementById('customTooltip');
+        const tooltipTitle = customTooltip.querySelector('.tooltip-title');
+        const tooltipBody = customTooltip.querySelector('.tooltip-body');
+        const tooltipClose = customTooltip.querySelector('.tooltip-close');
+        let tooltipPinned = false;
+
+        function showTooltip(x, y, title, items) {
+            tooltipTitle.textContent = title;
+            tooltipBody.innerHTML = items.map(item => `
+                <div class="tooltip-row">
+                    <span class="tooltip-color" style="background: ${item.color};"></span>
+                    <span class="tooltip-label">${item.label}</span>
+                    <span class="tooltip-value">${item.value}</span>
+                </div>
+            `).join('');
+
+            // Position tooltip
+            const containerRect = document.querySelector('.container').getBoundingClientRect();
+            let left = x + 15;
+            let top = y - 10;
+
+            // Adjust if tooltip goes off screen
+            const tooltipRect = customTooltip.getBoundingClientRect();
+            if (left + 250 > window.innerWidth) {
+                left = x - 200;
+            }
+            if (top + 200 > window.innerHeight) {
+                top = y - 150;
+            }
+            if (top < 10) top = 10;
+
+            customTooltip.style.left = left + 'px';
+            customTooltip.style.top = top + 'px';
+            customTooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            if (!tooltipPinned) {
+                customTooltip.classList.remove('visible');
+            }
+        }
+
+        function pinTooltip() {
+            tooltipPinned = true;
+            customTooltip.classList.add('pinned');
+        }
+
+        function unpinTooltip() {
+            tooltipPinned = false;
+            customTooltip.classList.remove('pinned', 'visible');
+        }
+
+        // Close button
+        tooltipClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            unpinTooltip();
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') unpinTooltip();
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (tooltipPinned && !customTooltip.contains(e.target) && !e.target.closest('canvas')) {
+                unpinTooltip();
+            }
+        });
+
         // ========== CHART INSTANCES ==========
         let charts = {};
 
@@ -578,10 +782,52 @@
             ticks: { color: '#8888a0', font: { family: "'Space Mono', monospace", size: 10 } }
         };
 
+        // Custom tooltip handler for external tooltip
+        function externalTooltipHandler(context) {
+            const { chart, tooltip } = context;
+            
+            if (tooltip.opacity === 0) {
+                hideTooltip();
+                return;
+            }
+
+            if (tooltipPinned) return;
+
+            const title = tooltip.title[0] || '';
+            const items = tooltip.dataPoints
+                .filter(dp => dp.parsed.y > 0 || dp.parsed.y !== null)
+                .map(dp => {
+                    let label = dp.dataset.label;
+                    let value = dp.parsed.y;
+                    
+                    // Add release info if available
+                    if (dp.dataset.releaseLabels && dp.dataset.releaseLabels[dp.dataIndex]) {
+                        label += ` (${dp.dataset.releaseLabels[dp.dataIndex]})`;
+                    }
+                    
+                    return {
+                        color: dp.dataset.borderColor || dp.dataset.backgroundColor,
+                        label: label,
+                        value: value
+                    };
+                });
+
+            if (items.length === 0) {
+                hideTooltip();
+                return;
+            }
+
+            const position = chart.canvas.getBoundingClientRect();
+            const x = position.left + window.scrollX + tooltip.caretX;
+            const y = position.top + window.scrollY + tooltip.caretY;
+
+            showTooltip(x, y, `Semana: ${title}`, items);
+        }
+
         // ========== CREATE CHARTS ==========
         function createBugsChart(canvasId, mini = false) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-            return new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -675,7 +921,7 @@
                     plugins: {
                         ...commonOptions.plugins,
                         zoom: mini ? {} : zoomOptions,
-                        tooltip: {
+                        tooltip: mini ? {
                             backgroundColor: 'rgba(26, 26, 37, 0.95)',
                             titleColor: '#f0f0f5',
                             bodyColor: '#8888a0',
@@ -683,19 +929,10 @@
                             borderWidth: 1,
                             cornerRadius: 8,
                             padding: 10,
-                            filter: item => item.parsed.y > 0,
-                            callbacks: {
-                                label: ctx => {
-                                    if (ctx.parsed.y > 0) {
-                                        let label = ctx.dataset.label + ': ' + ctx.parsed.y;
-                                        if (ctx.dataset.releaseLabels?.[ctx.dataIndex]) {
-                                            label += ' (Release ' + ctx.dataset.releaseLabels[ctx.dataIndex] + ')';
-                                        }
-                                        return label;
-                                    }
-                                    return null;
-                                }
-                            }
+                            filter: item => item.parsed.y > 0
+                        } : {
+                            enabled: false,
+                            external: externalTooltipHandler
                         }
                     },
                     scales: {
@@ -722,11 +959,23 @@
                     }
                 }
             });
+
+            // Add click handler for pinning tooltip (only for non-mini charts)
+            if (!mini) {
+                chart.canvas.addEventListener('click', (e) => {
+                    const points = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, false);
+                    if (points.length > 0 && customTooltip.classList.contains('visible')) {
+                        pinTooltip();
+                    }
+                });
+            }
+
+            return chart;
         }
 
         function createDefconChart(canvasId, mini = false) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-            return new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -750,7 +999,7 @@
                     plugins: {
                         ...commonOptions.plugins,
                         zoom: mini ? {} : zoomOptions,
-                        tooltip: {
+                        tooltip: mini ? {
                             backgroundColor: 'rgba(26, 26, 37, 0.95)',
                             titleColor: '#f0f0f5',
                             bodyColor: '#8888a0',
@@ -760,6 +1009,9 @@
                             callbacks: {
                                 label: ctx => ctx.parsed.y !== null ? 'DEFCON: ' + ctx.parsed.y : 'Sin datos'
                             }
+                        } : {
+                            enabled: false,
+                            external: externalTooltipHandler
                         }
                     },
                     scales: {
@@ -777,11 +1029,22 @@
                     }
                 }
             });
+
+            if (!mini) {
+                chart.canvas.addEventListener('click', (e) => {
+                    const points = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, false);
+                    if (points.length > 0 && customTooltip.classList.contains('visible')) {
+                        pinTooltip();
+                    }
+                });
+            }
+
+            return chart;
         }
 
         function createHistoriasChart(canvasId, mini = false) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-            return new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -805,13 +1068,16 @@
                     plugins: {
                         ...commonOptions.plugins,
                         zoom: mini ? {} : zoomOptions,
-                        tooltip: {
+                        tooltip: mini ? {
                             backgroundColor: 'rgba(26, 26, 37, 0.95)',
                             titleColor: '#f0f0f5',
                             bodyColor: '#8888a0',
                             borderColor: '#2a2a3a',
                             borderWidth: 1,
                             cornerRadius: 8
+                        } : {
+                            enabled: false,
+                            external: externalTooltipHandler
                         }
                     },
                     scales: {
@@ -829,6 +1095,17 @@
                     }
                 }
             });
+
+            if (!mini) {
+                chart.canvas.addEventListener('click', (e) => {
+                    const points = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, false);
+                    if (points.length > 0 && customTooltip.classList.contains('visible')) {
+                        pinTooltip();
+                    }
+                });
+            }
+
+            return chart;
         }
 
         // ========== INITIALIZATION ==========
@@ -849,6 +1126,9 @@
         const views = document.querySelectorAll('.view');
 
         function switchView(viewId) {
+            // Unpin tooltip when switching views
+            unpinTooltip();
+
             navTabs.forEach(t => t.classList.remove('active'));
             views.forEach(v => v.classList.remove('active'));
             
