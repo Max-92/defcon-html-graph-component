@@ -504,7 +504,7 @@
             <button class="nav-tab active" data-view="dashboard">📊 Dashboard</button>
             <button class="nav-tab" data-view="bugs">🐛 Bugs Enc/Corr</button>
             <button class="nav-tab" data-view="defcon">🚨 DEFCON</button>
-            <button class="nav-tab" data-view="historias">📋 Historias No Cubiertas</button>
+            <button class="nav-tab" data-view="automatizacion">🤖 Automatización</button>
         </nav>
 
         <!-- Dashboard View -->
@@ -528,13 +528,13 @@
                         <canvas id="miniDefconChart"></canvas>
                     </div>
                 </div>
-                <div class="chart-card" data-goto="historias">
+                <div class="chart-card" data-goto="automatizacion">
                     <div class="chart-card-title">
                         <span class="icon yellow"></span>
-                        Historias No Cubiertas (QA Coverage)
+                        Automatización (QA Coverage)
                     </div>
                     <div class="mini-chart-container">
-                        <canvas id="miniHistoriasChart"></canvas>
+                        <canvas id="miniAutomatizacionChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -628,12 +628,24 @@
             </div>
         </div>
 
-        <!-- Historias View -->
-        <div id="historias" class="view">
+        <!-- Automatización View -->
+        <div id="automatizacion" class="view">
             <div class="chart-wrapper">
                 <div class="chart-header">
-                    <h2 class="chart-title">📋 Historias No Cubiertas (QA Coverage)</h2>
+                    <h2 class="chart-title">🤖 Automatización (QA Coverage)</h2>
                     <div class="controls">
+                        <button class="filter-btn active" data-series="noCubiertas">
+                            <span class="indicator" style="background: #f59e0b;"></span>
+                            No Cubiertas
+                        </button>
+                        <button class="filter-btn active" data-series="automatizables">
+                            <span class="indicator" style="background: #22c55e;"></span>
+                            Automatizables
+                        </button>
+                        <button class="filter-btn active" data-series="automatizadas">
+                            <span class="indicator" style="background: #3b82f6;"></span>
+                            Automatizadas
+                        </button>
                         <div class="zoom-controls">
                             <button class="zoom-btn" data-zoom="in">+</button>
                             <button class="zoom-btn" data-zoom="out">−</button>
@@ -642,13 +654,28 @@
                     </div>
                 </div>
                 <div class="chart-container">
-                    <canvas id="historiasChart"></canvas>
+                    <canvas id="automatizacionChart"></canvas>
+                </div>
+                <div class="legend-custom">
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #f59e0b;"></span>
+                        Historias No Cubiertas
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #22c55e;"></span>
+                        Historias Automatizables
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon" style="background: #3b82f6;"></span>
+                        Historias Automatizadas
+                    </div>
                 </div>
                 <div class="instructions">
                     <div class="instructions-title">💡 Controles</div>
                     <div class="instructions-grid">
                         <span class="instructions-item"><kbd>Arrastrar</kbd> Desplazar</span>
                         <span class="instructions-item"><kbd>Scroll</kbd> Zoom</span>
+                        <span class="instructions-item"><kbd>Botones</kbd> Filtrar series</span>
                     </div>
                 </div>
             </div>
@@ -664,21 +691,23 @@
             '1-7/09', '8-14/09', '15-21/09', '22-28/09', 
             '29/9-5/10', '6-12/10', '13-19/10', '20-26/10',
             '27/10-2/11', '3-9/11', '10-16/11', '17-23/11',
-            '24-30/11', '1-7/12'
+            '24-30/11', '1-7/12', '8-14/12'
         ];
 
         // Bugs data
-        const bugsFound = [5, 3, 0, 7, 2, 3, 3, 2, 0, 2, 3, 1, 3, 2];
-        const bugsFixedMain = [0, 0, 8, 0, 0, 8, 0, 0, 10, 0, 2, 0, 5, 0];
-        const bugsFixedAlt = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0];
-        const releaseLabelsMain = ['', '', '5.9', '', '', '5.10', '', '', '5.11', '', '5.12', '', '5.13', ''];
-        const releaseLabelsAlt = ['', '', '', '', '', '', '', '', '', '', '', '', '5.14', ''];
+        const bugsFound = [5, 3, 0, 7, 2, 3, 3, 2, 0, 2, 3, 1, 3, 2, 1];
+        const bugsFixedMain = [0, 0, 8, 0, 0, 8, 0, 0, 10, 0, 2, 0, 5, 0, 0];
+        const bugsFixedAlt = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0];
+        const releaseLabelsMain = ['', '', '5.9', '', '', '5.10', '', '', '5.11', '', '5.12', '', '5.13', '', ''];
+        const releaseLabelsAlt = ['', '', '', '', '', '', '', '', '', '', '', '', '5.14', '', ''];
 
-        // DEFCON data (x = null for unknown)
-        const defconData = [3, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, null];
+        // DEFCON data
+        const defconData = [3, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null];
 
-        // Historias no cubiertas (NaN = null)
-        const historiasData = [null, null, 16, 15, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10];
+        // Automatización data (tres líneas)
+        const historiasNoCubiertasData = [null, null, 16, 15, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10, 16];
+        const historiasAutomatizablesData = [null, null, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 67];
+        const historiasAutomatizadasData = [null, null, 45, 46, 50, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51];
 
         // Cumulative calculations
         let cumulativeFound = [], cumulativeFixed = [];
@@ -1049,29 +1078,60 @@
             return chart;
         }
 
-        function createHistoriasChart(canvasId, mini = false) {
+        function createAutomatizacionChart(canvasId, mini = false) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'Historias No Cubiertas',
-                        data: historiasData,
-                        borderColor: 'rgba(234, 179, 8, 1)',
-                        backgroundColor: 'rgba(234, 179, 8, 0.1)',
-                        borderWidth: mini ? 2 : 3,
-                        pointRadius: mini ? 3 : 5,
-                        pointBackgroundColor: 'rgba(234, 179, 8, 1)',
-                        pointBorderColor: '#1a1a25',
-                        pointBorderWidth: 2,
-                        tension: 0.3,
-                        fill: false,
-                        spanGaps: false
-                    }]
+                    datasets: [
+                        {
+                            label: 'Historias No Cubiertas',
+                            data: historiasNoCubiertasData,
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: mini ? 2 : 3,
+                            pointRadius: mini ? 3 : 5,
+                            pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                            pointBorderColor: '#1a1a25',
+                            pointBorderWidth: 2,
+                            tension: 0.3,
+                            fill: false,
+                            spanGaps: false
+                        },
+                        {
+                            label: 'Historias Automatizables',
+                            data: historiasAutomatizablesData,
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: mini ? 2 : 3,
+                            pointRadius: mini ? 3 : 5,
+                            pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                            pointBorderColor: '#1a1a25',
+                            pointBorderWidth: 2,
+                            tension: 0.3,
+                            fill: false,
+                            spanGaps: false
+                        },
+                        {
+                            label: 'Historias Automatizadas',
+                            data: historiasAutomatizadasData,
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: mini ? 2 : 3,
+                            pointRadius: mini ? 3 : 5,
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointBorderColor: '#1a1a25',
+                            pointBorderWidth: 2,
+                            tension: 0.3,
+                            fill: false,
+                            spanGaps: false
+                        }
+                    ]
                 },
                 options: {
                     ...commonOptions,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
                         ...commonOptions.plugins,
                         zoom: mini ? {} : zoomOptions,
@@ -1095,8 +1155,8 @@
                         y: {
                             ...axisStyle,
                             beginAtZero: true,
-                            max: 18,
-                            ticks: { ...axisStyle.ticks, stepSize: mini ? 5 : 2, display: !mini },
+                            max: 75,
+                            ticks: { ...axisStyle.ticks, stepSize: mini ? 20 : 10, display: !mini },
                             title: { display: !mini, text: 'Cantidad de Historias', color: '#8888a0', font: { size: 11 } }
                         }
                     }
@@ -1120,12 +1180,12 @@
             // Mini charts for dashboard
             charts.miniBugs = createBugsChart('miniBugsChart', true);
             charts.miniDefcon = createDefconChart('miniDefconChart', true);
-            charts.miniHistorias = createHistoriasChart('miniHistoriasChart', true);
+            charts.miniAutomatizacion = createAutomatizacionChart('miniAutomatizacionChart', true);
 
             // Full charts
             charts.bugs = createBugsChart('bugsChart', false);
             charts.defcon = createDefconChart('defconChart', false);
-            charts.historias = createHistoriasChart('historiasChart', false);
+            charts.automatizacion = createAutomatizacionChart('automatizacionChart', false);
         }
 
         // ========== NAVIGATION ==========
@@ -1177,6 +1237,25 @@
                 const meta = charts.bugs.getDatasetMeta(index);
                 meta.hidden = !this.classList.contains('active');
                 charts.bugs.update();
+            });
+        });
+
+        // ========== AUTOMATIZACIÓN CHART CONTROLS ==========
+        const autoView = document.getElementById('automatizacion');
+        const autoDatasetMap = {
+            'noCubiertas': 0,
+            'automatizables': 1,
+            'automatizadas': 2
+        };
+
+        autoView.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const series = this.dataset.series;
+                const index = autoDatasetMap[series];
+                this.classList.toggle('active');
+                const meta = charts.automatizacion.getDatasetMeta(index);
+                meta.hidden = !this.classList.contains('active');
+                charts.automatizacion.update();
             });
         });
 
